@@ -1,5 +1,31 @@
 <template>
   <div class="container mx-auto flex flex-col items-center bg-gray-100 p-4">
+    <div
+      v-if="!isDataLoaded"
+      class="fixed w-100 h-100 opacity-80 bg-purple-800 inset-0 z-50 flex items-center justify-center"
+    >
+      <svg
+        class="animate-spin -ml-1 mr-3 h-12 w-12 text-white"
+        xmlns="http://www.w3.org/2000/svg"
+        fill="none"
+        viewBox="0 0 24 24"
+      >
+        <circle
+          class="opacity-25"
+          cx="12"
+          cy="12"
+          r="10"
+          stroke="currentColor"
+          stroke-width="4"
+        ></circle>
+        <path
+          class="opacity-75"
+          fill="currentColor"
+          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+        ></path>
+      </svg>
+    </div>
+
     <div class="container">
       <div class="w-full my-4"></div>
       <section>
@@ -11,7 +37,8 @@
             <div class="mt-1 relative rounded-md shadow-md">
               <input
                 v-model="ticker"
-                @keydown.enter="add"
+                @keydown.enter="add(ticker)"
+                @input="getCompletions(this.ticker)"
                 type="text"
                 name="wallet"
                 id="wallet"
@@ -19,6 +46,20 @@
                 placeholder="Например DOGE"
               />
             </div>
+            <div
+              v-if="completions.length"
+              class="flex bg-white shadow-md p-1 rounded-md shadow-md flex-wrap"
+            >
+              <span
+                v-for="c in completions"
+                @click="add(c)"
+                :key="c"
+                class="inline-flex items-center px-2 m-1 rounded-md text-xs font-medium bg-gray-300 text-gray-800 cursor-pointer"
+              >
+                {{c}}
+              </span>
+            </div>
+            <div v-if="tickerExists" class="text-sm text-red-600">Такой тикер уже добавлен</div>
           </div>
         </div>
         <button
@@ -139,17 +180,39 @@ export default {
       ticker: "",
       tickers: [],
       sel: null,
+      tickerExists: false,
+      completions: [],
+      allPossibleTickers: [],
+      isDataLoaded: false,
       graph: []
     };
   },
 
+  async created() {
+    const url =
+      "https://min-api.cryptocompare.com/data/all/coinlist?summary=true";
+    const response = await fetch(url);
+    const data = (await response.json()).Data;
+    for (const value of Object.values(data)) {
+      this.allPossibleTickers.push(value.Symbol.toUpperCase());
+    }
+    this.isDataLoaded = true;
+  },
+
   methods: {
-    add() {
+    add(ticker) {
+      this.ticker = ticker.toUpperCase();
       const currentTicker = {
         name: this.ticker,
         price: "-"
       };
 
+      for (const t of this.tickers) {
+        if (t.name === currentTicker.name) {
+          this.tickerExists = true;
+          return;
+        }
+      }
       this.tickers.push(currentTicker);
       setInterval(async () => {
         const f = await fetch(
@@ -157,7 +220,6 @@ export default {
         );
         const data = await f.json();
 
-        // currentTicker.price =  data.USD > 1 ? data.USD.toFixed(2) : data.USD.toPrecision(2);
         this.tickers.find(t => t.name === currentTicker.name).price =
           data.USD > 1 ? data.USD.toFixed(2) : data.USD.toPrecision(2);
 
@@ -166,6 +228,22 @@ export default {
         }
       }, 5000);
       this.ticker = "";
+      this.completions = [];
+    },
+
+    getCompletions(ticker) {
+      this.completions = [];
+      this.tickerExists = false;
+      if (!ticker) {
+        return [];
+      }
+      const loweredTicker = ticker.toUpperCase();
+      for (const t of this.allPossibleTickers) {
+        if (t.startsWith(loweredTicker)) {
+          this.completions.push(t);
+          if (this.completions.length === 4) break;
+        }
+      }
     },
 
     select(ticker) {
@@ -184,6 +262,6 @@ export default {
         price => 5 + ((price - minValue) * 95) / (maxValue - minValue)
       );
     }
-  }
+  },
 };
 </script>
