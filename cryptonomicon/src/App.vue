@@ -56,10 +56,12 @@
                 :key="c"
                 class="inline-flex items-center px-2 m-1 rounded-md text-xs font-medium bg-gray-300 text-gray-800 cursor-pointer"
               >
-                {{c}}
+                {{ c }}
               </span>
             </div>
-            <div v-if="tickerExists" class="text-sm text-red-600">Такой тикер уже добавлен</div>
+            <div v-if="tickerExists" class="text-sm text-red-600">
+              Такой тикер уже добавлен
+            </div>
           </div>
         </div>
         <button
@@ -262,6 +264,6 @@ export default {
         price => 5 + ((price - minValue) * 95) / (maxValue - minValue)
       );
     }
-  },
+  }
 };
 </script>
